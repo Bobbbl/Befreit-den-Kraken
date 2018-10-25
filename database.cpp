@@ -163,12 +163,8 @@ int logKrake(const QString path, const QString tablename, const double temp, con
         /* Sign a new Query*/
         QSqlQuery query;
         /* Save Value*/
-        //QString command = QString("INSERT INTO %s VALUES(datetime('now'), %6.2f, %6.2f, %6.2f)");
-        //command.sprintf("INSERT INTO %s VALUES(datetime('now'), %.2f, %.2f, %.2f)", tablename, command, temp, trueb, ph);
         QString command = QString("INSERT INTO " + tablename + " "+ QString("VALUES(datetime('now'), %1, %2, %3)").arg(temp,0, 'g', 2).arg(trueb,0, 'g', 2).arg(ph,0, 'g', 2));
-        //command.sprintf("%d %d %d", temp, trueb, ph);
-        qDebug() << "Command: " << command;
-        qDebug() << "Command: " << command;
+
         if(!query.exec(command))
         {
             qWarning() << "Error: " << query.lastError().text();

@@ -29,7 +29,7 @@ MainWindow::MainWindow(QWidget *parent) :
 	/*Temp sensor timer*/
     TempSensor->start(7000);
     /*Timer credentials*/
-    timer->start(60);
+    timer->start(6000);
     //timer->start(1);
 
     this->ph_sensor->start();
@@ -134,6 +134,7 @@ void MainWindow::saverSlot(){
 	this->saveAndCheck(this->path, QString::number(this->phValue));
 	this->saveAndCheck(this->path, QString::number(this->truebValue));
 	this->saveAndCheck(this->path, QString::number(this->tempValue));
+    qDebug() << "Schreibe in Datenbank";
 	logKrake("/var/www/krakelog.db", "krake", this->tempValue, this->truebValue, this->phValue);
 	
 }
@@ -162,14 +163,8 @@ void MainWindow::saveAndCheck(QString path, QString inhalt){
 	QTextStream out(&file); // make text stream for convinient text write 
 	out << QDate::currentDate().toString() << " " << QTime::currentTime().toString() << " " << inhalt << endl;
 	
-    		
-	 	
-
 	file.flush();
 	file.close();
-
-
-
 }
 
 
@@ -190,28 +185,69 @@ void MainWindow::readPHSensor(int value)
         low--;
     }
 
-    double ph = volt*3.5 + ph7offset;
-    /*TODO: Hier noch ein LookUp TAble read einfügen und eine lineare Interpolation*/
+    //double ph = volt*3.5 + ph7offset;
+    /*First Read Look Up Table*/
+    interpolation_inputs iinputs = readPHLookUpTable();
+    std::vector<double> volts;
+    std::vector<double>  ph;
+    if(iinputs.x.size() != 0 && iinputs.y.size() != 0){
+
+
+    if(iinputs.x[0] == -1 || iinputs.y[0] == -1){
+        /*Look Up Table kann gerade nicht geöffnet werden, weil 
+        1. nicht vorhanden oder defekt
+        2. wird gerade modifiziert
+        benutze statdessen 
+        andere Formel*/
+        ph.push_back(volt*3.5 + ph7offset);
+    }else{
+        volts.push_back(volt);
+        /*Then get interpolatet value*/
+        ph = interpolation(iinputs, volts);
+
+    }
     
-	this->phValue = ph;
-    ui->pushButtonPH->setText(QString::number(ph));
+	this->phValue = ph[0] + ph7offset;
+    ui->pushButtonPH->setText(QString::number(ph[0] + ph7offset));
+
+    }
 
 }
 
-void MainWindow::readTruebSensor(int value)
-{
+void MainWindow::readTruebSensor(int value){
     this->trueb_direct_values.push_back(value);
+
     if(trueb_direct_values.size() >= 10){
         trueb_direct_values.erase(trueb_direct_values.begin());
     }
     double avrg = this->avarageValues(&this->trueb_direct_values);
     double volt = this->adcToVolts(avrg);
-    double trueb = (volt-this->lob)/(this->upb - this->lob) * 100.0;
-    if(trueb <= 0 ){
-        trueb = 0;
+    double trueb_backup = (volt-this->lob)/(this->upb - this->lob) * 100.0;
+    if(trueb_backup <= 0 ){
+        trueb_backup = 0;
     }
-    this->truebValue = trueb;
-    ui->pushButtonTrueb->setText(QString::number(trueb));
+    /*First Read Look Up Table*/
+    interpolation_inputs iinputs = readTruebLookUpTable();
+    std::vector<double> volts;
+    std::vector<double>  trueb;
+    if(iinputs.x[0] == -1 || iinputs.y[0] == -1){
+        /*Look Up Table kann gerade nicht geöffnet werden, weil 
+        1. nicht vorhanden oder defekt
+        2. wird gerade modifiziert
+        benutze statdessen 
+        andere Formel*/
+        trueb.push_back(trueb_backup);
+    }else{
+        
+        volts.push_back(volt);
+        /*Then get interpolatet value*/
+        trueb = interpolation(iinputs, volts);
+    }
+    if(isinf(trueb[0])){
+        trueb[0] = 0;
+    }
+    this->truebValue = trueb[0];
+    ui->pushButtonTrueb->setText(QString::number(trueb[0]));
 }
 
 void MainWindow::readTempSensor(int value)
@@ -441,13 +477,20 @@ int* MainWindow::searchTwoNearest(std::vector<T1> anArray, T1 key)
     return rArray;
 }
 
-std::vector<int>* readTruebLookUpTable(){
+interpolation_inputs MainWindow::readTruebLookUpTable()
+{
     
     const unsigned short int strlength = 50;
     /* Open File */
+    QString inipath = QCoreApplication::applicationDirPath();
+    inipath.append("/TruebLookUpTable.txt");
     QFile file("TruebLookUpTable.txt");
+    qDebug() << "Path: " << inipath;
     if(!file.open(QIODevice::ReadOnly | QIODevice::Text)){
-        return NULL;
+        interpolation_inputs tmp;
+        tmp.x.push_back(-1);
+        tmp.y.push_back(-1);
+        return tmp;
     }
     
     /* Load whole Text File in array "line" */
@@ -472,28 +515,40 @@ std::vector<int>* readTruebLookUpTable(){
     }
 
     /* Read all lines until reaching the next '#' - marker in file */
-    std::vector<int> *v = new std::vector<int>();
+    interpolation_inputs v;
+    QStringList pieces;
+    QString l;
+    double x, y;
+    trueb_line++;
     while(trueb_line <= strlength){
         if(line[trueb_line].contains("#"))
         {
             break;
         }
-        v->push_back(line[trueb_line].toInt());
+        pieces = line[trueb_line].split(";");
+        x = pieces.value(pieces.length()-2).toDouble();
+        y = pieces.value(pieces.length()-1).toDouble();
+        
+        v.x.push_back(x);
+        v.y.push_back(y);
         trueb_line++;
     }
 
-    return v;
+   return v;
  
-
-
 }
 
-std::vector<int>* readPHLookUpTable(){
+interpolation_inputs MainWindow::readPHLookUpTable(){
     const unsigned short int strlength = 50;
     /*Open File*/
-    QFile file("PhLookUpTable.txt");
+    QString inipath = QCoreApplication::applicationDirPath();
+    inipath.append("/PhLookUpTable.txt");
+    QFile file(inipath);
     if(!file.open(QIODevice::ReadOnly | QIODevice::Text)){
-        return NULL;
+        interpolation_inputs tmp;
+        tmp.x.push_back(-1);
+        tmp.y.push_back(-1);
+        return tmp;
     }
 
     /*Load whole Text File in array "line"*/
@@ -518,19 +573,74 @@ std::vector<int>* readPHLookUpTable(){
         }
     }
     /*Read all lines until reaching the nex '#' - marker in file*/
-    std::vector<int> *v = new std::vector<int>();
-    while(ph_line <= strlength)
-    {
+    interpolation_inputs v;
+    QStringList pieces;
+    QString l;
+    double x, y;
+    ph_line++;
+    while(ph_line <= strlength){
         if(line[ph_line].contains("#"))
         {
             break;
         }
-        v->push_back(line[ph_line].toInt());
+        pieces = line[ph_line].split(";");
+        x = pieces.value(pieces.length()-2).toDouble();
+        y = pieces.value(pieces.length()-1).toDouble();
+        
+        v.x.push_back(x);
+        v.y.push_back(y);
         ph_line++;
     }
-    return v;
+
+   return v;
 }
 
-T1 linearInterpolation(T1 y0, T1 x0, T1 y1, T1 x1){
-    return y0 + (y1-y0)*(x-x0)/(x1-x0);
+int MainWindow::findNearestLowerNeighbourIndex(const double ac_dfValue, std::vector<double> x){
+    double lv_dfDistance = DBL_MAX;
+    int lv_nIndex = -1;
+
+    for (unsigned int i = 0; i < x.size(); i++) { 
+    double newDist = ac_dfValue - x[i]; 
+    if (newDist >= 0 && newDist < lv_dfDistance) {
+        lv_dfDistance = newDist;
+        lv_nIndex = i;
+        }
+    }
+    return lv_nIndex;
+}
+
+std::vector<double> MainWindow::interpolation(interpolation_inputs inputs, std::vector<double> xx){
+    double dx, dy;
+    std::vector<double> x, y;
+    x = inputs.x;
+    y = inputs.y;
+    std::vector<double> slope, intercept, result;
+    slope.resize(x.size());
+    intercept.resize(x.size());
+    result.resize(xx.size());
+    int indiceEnVector;
+
+    for (unsigned i = 0; i < x.size(); i++){
+    if (i < x.size() - 1){
+        dx = x[i + 1] - x[i];
+        dy = y[i + 1] - y[i];
+        slope[i] = dy / dx;
+        intercept[i] = y[i] - x[i] * slope[i];
+    }
+    else{
+        slope[i] = slope[i - 1];
+        intercept[i] = intercept[i - 1];
+    }
+    }
+
+    for (unsigned i = 0; i < xx.size(); i++) {
+    indiceEnVector = findNearestLowerNeighbourIndex(xx[i], x);
+    if (indiceEnVector != -1){
+        result[i] = slope[indiceEnVector] * 
+                    xx[i] + intercept[indiceEnVector];
+        }
+    else
+        result[i] = DBL_MAX;
+    }
+    return result;
 }

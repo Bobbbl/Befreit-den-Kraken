@@ -17,6 +17,13 @@
 #include <QFileDialog>
 #include <QDate>
 #include <QStringList>
+#include <cfloat>
+#include <cmath>
+
+typedef struct {
+    std::vector<double> x;
+    std::vector<double> y;
+}interpolation_inputs;
 
 namespace Ui {
 class MainWindow;
@@ -32,8 +39,15 @@ public:
 
     template <typename T1>
     T1 searchNearest(std::vector<T1>, T1 key);
+    /*@Inputs
+     anArray: An vector with the values to search in
+     key: The value to search for (find nearest two possible values)
+     @Output
+     pointer to int Array with 2 values of the indexes of the values from Arrray.
+     The value in index 0 is the index of the lower found value.
+     The value in index 1 is the index of the higher found value.*/
     template <typename T1>
-    int* searchTwoNearest(std::vector<T1>, T1 key);
+    int* searchTwoNearest(std::vector<T1> anArray, T1 key);
 
     ~MainWindow();
 	
@@ -74,7 +88,12 @@ private:
     void saveTruebInit(double upper, double lower);
     
     void readLookUpTable();
-    void readPHLookUpTable();
+    interpolation_inputs readPHLookUpTable();
+    interpolation_inputs readTruebLookUpTable();
+
+
+    int findNearestLowerNeighbourIndex(const double value, std::vector<double> array);
+    std::vector<double> interpolation(interpolation_inputs inputs, std::vector<double> xx);
 
 };
 
