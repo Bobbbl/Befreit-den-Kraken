@@ -58,8 +58,8 @@ def main():
     
     print("<html>")
     printHTMLHead("Temperatur", table_temp)
-    print_graph_script(table_trueb, id="truebung")
-    print_graph_script(table_ph, id="ph")
+    print_graph_script(table_trueb, id="truebung", legend="Truebung", title="Truebung")
+    print_graph_script(table_ph, id="ph", legend="PH", title="PH")
     print("<body>")
     print("<h1>LOGGER</h1>")
     
@@ -87,7 +87,7 @@ def main():
 
     sys.stdout.flush()
 
-def print_graph_script(table, id="chart_div"):
+def print_graph_script(table, id="chart_div", legend="temperatur", title="Temperatur"):
         # google chart snippet
     chart_code="""
     <script type="text/javascript" src="https://www.google.com/jsapi"></script>
@@ -96,12 +96,12 @@ def print_graph_script(table, id="chart_div"):
       google.setOnLoadCallback(drawChart);
       function drawChart() {
         var data = google.visualization.arrayToDataTable([
-          ['Time', 'temperatur'],
+          ['Time', '%s'],
 %s
         ]);
 
         var options = {
-          title: 'Temperatur'
+          title: '%s'
         };
 
         var chart = new google.visualization.LineChart(document.getElementById('%s'));
@@ -109,7 +109,7 @@ def print_graph_script(table, id="chart_div"):
       }
     </script>"""
 
-    print(chart_code % (table, id))
+    print(chart_code % (legend, table, title, id))
 
 def printHTMLHead(title, table):
     print("<head>")
@@ -141,17 +141,17 @@ def show_stats(column, option = 1000):
 
     curs.execute("SELECT timestamp, max(%s) FROM krake WHERE timestamp > datetime('now', '-%s hour') AND timestamp <= datetime('now')" % (column, option))
     rowmax = curs.fetchone()
-    rowstrmax = "{0}&nbsp&nbsp&nbsp{1}C".format(str(rowmax[0]), str(rowmax[1]))
+    rowstrmax = "{0}&nbsp&nbsp&nbsp{1}".format(str(rowmax[0]), str(rowmax[1]))
 
     curs.execute("SELECT timestamp, min(%s) FROM krake WHERE timestamp > datetime('now', '-%s hour') AND timestamp <= datetime('now')" % (column, option))
     rowmin = curs.fetchone()
-    rowstrmin = "{0}&nbsp&nbsp&nbsp{1}C".format(str(rowmin[0]), str(rowmin[1]))
+    rowstrmin = "{0}&nbsp&nbsp&nbsp{1}".format(str(rowmin[0]), str(rowmin[1]))
 
     curs.execute("SELECT timestamp, avg(%s) FROM krake WHERE timestamp > datetime('now', '-%s hour') AND timestamp <= datetime('now')" % (column, option))
     rowavg = curs.fetchone()
-    rowstravg = "{0}&nbsp&nbsp&nbsp{1}C".format(str(rowavg[0]), str(rowavg[1]))
+    rowstravg = "{0}&nbsp&nbsp&nbsp{1}".format(str(rowavg[0]), str(rowavg[1]))
 
-    print("<hr>")
+    
 
     print("<h2>Minumum %s&nbsp</h2>" % column)
     print(rowstrmin)
@@ -160,7 +160,7 @@ def show_stats(column, option = 1000):
     print("<h2>Average %s</h2>" %column)
     print("%.3f" % rowavg[1])
 
-    print("<hr>")
+    
 
     print("<h2>In the last hour:</h2>")
     print("<table>")
@@ -170,7 +170,7 @@ def show_stats(column, option = 1000):
 
 
     for row in rows:
-        rowstr = "<tr><td>{0}&emsp;&emsp;</td><td>{1}C</td></tr>".format(str(row[0]),str(row[col]))
+        rowstr = "<tr><td>{0}&emsp;&emsp;</td><td>{1}</td></tr>".format(str(row[0]),str(row[col]))
         print(rowstr)
     print("</table>")
     print("<hr>")
