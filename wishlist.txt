@@ -1,0 +1,9 @@
+[06:07, 27.9.2018] Christian Vogt: Moinmoin, hui und das um 6 uhr früh... ich meld mich, wenn ich wach bin, so zwischen 8 und 9 😁
+[18:32, 27.9.2018] Christian Vogt: Viel später als gedacht 🙄
+[18:33, 27.9.2018] Christian Vogt: Also: Anmeldung des Samba Laufwerks über Konsole wäre völlig in Ordnung, nimm die einfachste Lösung
+[18:34, 27.9.2018] Christian Vogt: Die Visualisierung aus deinem Beispiel dürfte ziemlich hin kommen
+[18:36, 27.9.2018] Christian Vogt: Das txt file ist eigentlich eher für mich, es ist halt sehr leicht sowas über excel auszuwerten. Wenn msn die datenbank genau so leicht auswerten kann wär es ok das txt file wegzulassen
+[18:37, 27.9.2018] Christian Vogt: Und wegen der zuordnungstabelle
+[18:38, 27.9.2018] Christian Vogt: Trübung und dichte verhalten sich nicht linear. Deshslb würde ich jedem dichtewert einrn signalpegel zuordnen, dazwischen wird linear interpoliert
+[18:40, 27.9.2018] Christian Vogt: Wegen toleranzen und verschiedener poliermittel muss ich sowieso jeden sensor separat kalibrieren
+[18:42, 27.9.2018] Christian Vogt: Es soll also die aus der trübung errechnete dichte gespeichert werden
