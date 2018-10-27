@@ -29,8 +29,7 @@ MainWindow::MainWindow(QWidget *parent) :
 	/*Temp sensor timer*/
     TempSensor->start(7000);
     /*Timer credentials*/
-    timer->start(6000);
-    //timer->start(1);
+    timer->start(120000);	// emits timeout - signal every two minutes
 
     this->ph_sensor->start();
     this->trueb_sensor->start();
@@ -485,7 +484,6 @@ interpolation_inputs MainWindow::readTruebLookUpTable()
     QString inipath = QCoreApplication::applicationDirPath();
     inipath.append("/TruebLookUpTable.txt");
     QFile file("TruebLookUpTable.txt");
-    qDebug() << "Path: " << inipath;
     if(!file.open(QIODevice::ReadOnly | QIODevice::Text)){
         interpolation_inputs tmp;
         tmp.x.push_back(-1);

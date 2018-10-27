@@ -170,8 +170,13 @@ int logKrake(const QString path, const QString tablename, const double temp, con
             qWarning() << "Error: " << query.lastError().text();
             return 0;
         }
-
-        db.close();
-        return 1;
+	
+	query.finish();
+	
+	
     }
+    db.close();
+    db.removeDatabase(QSqlDatabase::defaultConnection);
+    return 1;
 }
+        
